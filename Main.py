@@ -67,4 +67,4 @@ while True:
                     os.makedirs(out_path)
                 for dicom_file in dicom_dictionary[series_description]:
                     os.rename(os.path.join(new_path, dicom_file), os.path.join(out_path, dicom_file))
-            xxx = 1
+            os.remove(os.path.join(path, zip_file))
