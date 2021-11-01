@@ -1,14 +1,11 @@
 import os
 import pydicom
 import time
-from DicomRTTool import DicomReaderWriter
 import zipfile, os, tarfile
 
 
 def read_dicom_header(path, file, dicom_dictionary):
     ds = pydicom.read_file(os.path.join(path, file), stop_before_pixels=True)
-    dicom_dictionary['given_name'] = ds.PatientName.given_name
-    dicom_dictionary['family_name'] = ds.PatientName.family_name
     series_description = ds.SeriesDescription
     for item in [series_description]:
         if item not in dicom_dictionary:
@@ -39,32 +36,50 @@ def unzip_file(file_path, output_path):
     return None
 
 
-path = r'\\ucsdhc-varis2\radonc$\bmanderson\unzipthings'
-while True:
-    print('Waiting...')
-    time.sleep(5)
-    zip_files = [i for i in os.listdir(path) if i.endswith('.zip')]
-    for zip_file in zip_files:
-        output_path = os.path.join(path, zip_file[:-4])
-        if not os.path.exists(output_path):
-            unzip_file(file_path=os.path.join(path, zip_file), output_path=output_path)
-        dicom_files = [i for i in os.listdir(output_path) if i.endswith('.dcm')]
-        if dicom_files:
-            dicom_dictionary = dict()
-            i = 0
-            for dicom_file in dicom_files:
-                read_dicom_header(path=output_path, file=dicom_file, dicom_dictionary=dicom_dictionary)
-                i += 1
-                if i % 250 == 0:
-                    print(i)
-            new_path = os.path.join(path, dicom_dictionary['family_name'] + '_' + dicom_dictionary['given_name'])
-            os.rename(output_path, new_path)
-            del dicom_dictionary['family_name']
-            del dicom_dictionary['given_name']
-            for series_description in dicom_dictionary:
-                out_path = os.path.join(new_path, series_description).replace(':', '').replace('>', '')
-                if not os.path.exists(out_path):
-                    os.makedirs(out_path)
-                for dicom_file in dicom_dictionary[series_description]:
-                    os.rename(os.path.join(new_path, dicom_file), os.path.join(out_path, dicom_file))
-            os.remove(os.path.join(path, zip_file))
+def rename_folder(base_path, dicom_path):
+    dicom_files = [i for i in os.listdir(dicom_path) if i.endswith('.dcm')]
+    for file in dicom_files:
+        ds = pydicom.read_file(os.path.join(dicom_path, file))
+        given_name = ds.PatientName.given_name
+        family_name = ds.PatientName.family_name
+        new_path = os.path.join(base_path, family_name + '_' + given_name)
+        os.rename(dicom_path, new_path)
+        return new_path
+    return dicom_path
+
+
+def separate_into_series(dicom_path):
+    dicom_files = [i for i in os.listdir(dicom_path) if i.endswith('.dcm')]
+    if dicom_files:
+        dicom_dictionary = dict()
+        for dicom_file in dicom_files:
+            read_dicom_header(path=dicom_path, file=dicom_file, dicom_dictionary=dicom_dictionary)
+        for series_description in dicom_dictionary:
+            out_path = os.path.join(dicom_path, series_description).replace(':', '').replace('>', '')
+            if not os.path.exists(out_path):
+                os.makedirs(out_path)
+            for dicom_file in dicom_dictionary[series_description]:
+                os.rename(os.path.join(dicom_path, dicom_file), os.path.join(out_path, dicom_file))
+    return None
+
+
+def main():
+    path = r'\\ucsdhc-varis2\radonc$\00plans\LifeImage Exports'
+    while True:
+        print('Waiting...')
+        time.sleep(3)
+        zip_files = [i for i in os.listdir(path) if i.endswith('.zip')]
+        for zip_file in zip_files:
+            print('Files found...')
+            time.sleep(10)
+            print('Running...')
+            output_path = os.path.join(path, zip_file[:-4])
+            if not os.path.exists(output_path):
+                unzip_file(file_path=os.path.join(path, zip_file), output_path=output_path)
+                os.remove(os.path.join(path, zip_file))  # Delete zipped file
+            new_path = rename_folder(base_path=path, dicom_path=output_path)
+            # separate_into_series(new_path)  # Separate into their respective exams
+
+
+if __name__ == '__main__':
+    main()
