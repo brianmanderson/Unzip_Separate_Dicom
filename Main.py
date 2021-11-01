@@ -41,6 +41,7 @@ def unzip_file(file_path, output_path):
 
 path = r'\\ucsdhc-varis2\radonc$\bmanderson\unzipthings'
 while True:
+    print('Waiting...')
     time.sleep(5)
     zip_files = [i for i in os.listdir(path) if i.endswith('.zip')]
     for zip_file in zip_files:
@@ -56,10 +57,14 @@ while True:
                 i += 1
                 if i % 250 == 0:
                     print(i)
+            new_path = os.path.join(path, dicom_dictionary['family_name'] + '_' + dicom_dictionary['given_name'])
+            os.rename(output_path, new_path)
+            del dicom_dictionary['family_name']
+            del dicom_dictionary['given_name']
             for series_description in dicom_dictionary:
-                out_path = os.path.join(output_path, series_description).replace(':', '').replace('>', '')
+                out_path = os.path.join(new_path, series_description).replace(':', '').replace('>', '')
                 if not os.path.exists(out_path):
                     os.makedirs(out_path)
                 for dicom_file in dicom_dictionary[series_description]:
-                    os.rename(os.path.join(output_path, dicom_file), os.path.join(out_path, dicom_file))
+                    os.rename(os.path.join(new_path, dicom_file), os.path.join(out_path, dicom_file))
             xxx = 1
