@@ -125,11 +125,13 @@ def main():
                 continue
             dicom_files = [os.path.join(root, i) for i in files if i.endswith('.dcm')]
             if dicom_files:
+                print("Loading up images for new UIDs...")
                 # Check to make sure all of the files are transferred over
-                time.sleep(5)
+                time.sleep(8)
                 while len(os.listdir(root)) != len(files):
-                    time.sleep(5)
+                    print("Making sure all of them are transferred")
                     files = os.listdir(root)
+                    time.sleep(8)
                 dicom_dictionary = dict()
                 create_dicom_dictionary(dicom_path=root, dicom_dictionary=dicom_dictionary)
                 items = []
@@ -153,6 +155,7 @@ def main():
                     t.join()
                 fid = open(os.path.join(root, 'NewFrameOfRef.txt'), 'w+')
                 fid.close()
+                print("Done!")
 
 
 if __name__ == '__main__':
