@@ -103,7 +103,7 @@ def create_dicom_dictionary(dicom_path, dicom_dictionary):
 
 
 def main():
-    path = r'\\ucsdhc-varis2\radonc$\00plans\Separate'
+    path = r'\\ucsdhc-varis2\radonc$\00plans\Unzip_Unlink'
     while True:
         print('Waiting...')
         time.sleep(3)
@@ -113,7 +113,12 @@ def main():
         """
         for zip_file in zip_files:
             print('Files found...')
-            time.sleep(10)
+            zip_file_size = os.path.getsize(os.path.join(path, zip_file))
+            time.sleep(8)
+            if os.path.getsize(os.path.join(path, zip_file)) != zip_file_size:
+                print("Waiting for the file to be fully transferred")
+                zip_file_size = os.path.getsize(os.path.join(path, zip_file))
+                time.sleep(8)
             print('Running...')
             output_path = os.path.join(path, zip_file[:-4])
             if not os.path.exists(output_path):
