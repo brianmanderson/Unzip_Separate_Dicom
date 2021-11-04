@@ -1,7 +1,8 @@
 import os
 import pydicom
 import time
-import zipfile, os, tarfile
+import zipfile
+import tarfile
 from threading import Thread
 from multiprocessing import cpu_count
 from queue import *
