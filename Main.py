@@ -12,8 +12,15 @@ def read_dicom_header(path, file, dicom_dictionary):
     series_description = ds.SeriesDescription
     for item in [series_description]:
         if item not in dicom_dictionary:
-            dicom_dictionary[item] = {'Images': [], 'NewFrameOfRef': None}
+            dicom_dictionary[item] = {'Images': [], 'NewFrameOfRef': pydicom.uid.generate_uid()}
         dicom_dictionary[item]['Images'].append(file)
+
+
+def write_dicom(dicom_file, frameofrefUID):
+    ds = pydicom.read_file(dicom_file)
+    ds.FrameOfReferenceUID = frameofrefUID
+    pydicom.write_file(filename=dicom_file, dataset=ds)
+    return None
 
 
 def dicom_reader_worker(A):
@@ -25,6 +32,18 @@ def dicom_reader_worker(A):
         else:
             dicom_path, dicom_file = item
             read_dicom_header(path=dicom_path, file=dicom_file, dicom_dictionary=dicom_dictionary)
+        q.task_done()
+
+
+def dicom_writer_worker(A):
+    q, = A
+    while True:
+        item = q.get()
+        if item is None:
+            break
+        else:
+            dicom_path, frameofrefUID = item
+            write_dicom(dicom_path, frameofrefUID)
         q.task_done()
 
 
@@ -102,6 +121,8 @@ def main():
                 os.remove(os.path.join(path, zip_file))  # Delete zipped file
             new_path = rename_folder(base_path=path, dicom_path=output_path)
         for root, folders, files in os.walk(path):
+            if 'NewFrameOfRef.txt' in files:
+                continue
             dicom_files = [os.path.join(root, i) for i in files if i.endswith('.dcm')]
             if dicom_files:
                 # Check to make sure all of the files are transferred over
@@ -109,18 +130,27 @@ def main():
                 while len(os.listdir(root)) != len(files):
                     time.sleep(5)
                     files = os.listdir(root)
-                if 'NewFrameOfRef.txt' in files:
-                    continue
                 dicom_dictionary = dict()
                 create_dicom_dictionary(dicom_path=root, dicom_dictionary=dicom_dictionary)
+                items = []
                 for description_key in dicom_dictionary:
-                    new_frame_of_ref = pydicom.uid.generate_uid()
-                    dicom_dictionary[description_key]
-
-                for dicom_file in dicom_files:
-                    ds = pydicom.read_file(dicom_file)
-                    ds.FrameOfReferenceUID = new_frame_of_ref
-                    pydicom.write_file(filename=dicom_file, dataset=ds)
+                    new_frame_of_ref = dicom_dictionary[description_key]['NewFrameOfRef']
+                    for dicom_file in dicom_dictionary[description_key]['Images']:
+                        items.append([os.path.join(root, dicom_file), new_frame_of_ref])
+                thread_count = int(cpu_count() * .5)
+                q = Queue(maxsize=int(thread_count))
+                A = (q,)
+                threads = []
+                for worker in range(thread_count):
+                    t = Thread(target=dicom_writer_worker, args=(A,))
+                    t.start()
+                    threads.append(t)
+                for item in items:
+                    q.put(item)
+                for i in range(thread_count):
+                    q.put(None)
+                for t in threads:
+                    t.join()
                 fid = open(os.path.join(root, 'NewFrameOfRef.txt'), 'w+')
                 fid.close()
 
