@@ -99,7 +99,7 @@ def main():
                 unzip_file(file_path=os.path.join(path, zip_file), output_path=output_path)
                 os.remove(os.path.join(path, zip_file))  # Delete zipped file
             new_path = rename_folder(base_path=path, dicom_path=output_path)
-            separate_into_series(new_path)  # Separate into their respective exams
+            # separate_into_series(new_path)  # Separate into their respective exams
         for root, folders, files in os.walk(path):
             dicom_files = [os.path.join(root, i) for i in files if i.endswith('.dcm')]
             if dicom_files:
