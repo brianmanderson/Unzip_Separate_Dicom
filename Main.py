@@ -10,8 +10,8 @@ from queue import *
 
 def read_dicom_header(path, file, dicom_dictionary):
     ds = pydicom.read_file(os.path.join(path, file), stop_before_pixels=True)
-    series_description = ds.SeriesDescription
-    for item in [series_description]:
+    series_UID = ds.SeriesInstanceUID
+    for item in [series_UID]:
         if item not in dicom_dictionary:
             dicom_dictionary[item] = {'Images': [], 'NewFrameOfRef': pydicom.uid.generate_uid()}
         dicom_dictionary[item]['Images'].append(file)
@@ -73,11 +73,11 @@ def rename_folder(base_path, dicom_path):
 
 
 def separate_into_folders(dicom_path, dicom_dictionary):
-    for series_description in dicom_dictionary:
-        out_path = os.path.join(dicom_path, series_description).replace(':', '').replace('>', '')
+    for series_UID in dicom_dictionary:
+        out_path = os.path.join(dicom_path, series_UID).replace(':', '').replace('>', '')
         if not os.path.exists(out_path):
             os.makedirs(out_path)
-        for dicom_file in dicom_dictionary[series_description]['Images']:
+        for dicom_file in dicom_dictionary[series_UID]['Images']:
             os.rename(os.path.join(dicom_path, dicom_file), os.path.join(out_path, dicom_file))
         fid = open(os.path.join(out_path, 'Separated.txt'), 'w+')
         fid.close()
@@ -141,9 +141,9 @@ def main():
                 dicom_dictionary = dict()
                 create_dicom_dictionary(dicom_path=root, dicom_dictionary=dicom_dictionary)
                 items = []
-                for description_key in dicom_dictionary:
-                    new_frame_of_ref = dicom_dictionary[description_key]['NewFrameOfRef']
-                    for dicom_file in dicom_dictionary[description_key]['Images']:
+                for series_UID in dicom_dictionary:
+                    new_frame_of_ref = dicom_dictionary[series_UID]['NewFrameOfRef']
+                    for dicom_file in dicom_dictionary[series_UID]['Images']:
                         items.append([os.path.join(root, dicom_file), new_frame_of_ref])
                 thread_count = int(cpu_count() * .5)
                 q = Queue(maxsize=int(thread_count))
